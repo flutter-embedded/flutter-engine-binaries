@@ -1,0 +1,11 @@
+solutions = [{
+  "name": "src/flutter",
+  "deps_file": "DEPS",
+  "url": "https://github.com/flutter/engine.git",
+  "custom_vars": {
+    "download_android_deps": False,
+    "download_esbuild": False,
+    "download_fuchsia_deps": False,
+    "download_linux_deps": True,
+  }
+}]

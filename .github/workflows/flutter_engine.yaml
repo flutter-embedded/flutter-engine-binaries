@@ -1,0 +1,67 @@
+name: Flutter Engine
+on: [push]
+env:
+  TAR_OPTIONS: --no-same-owner
+jobs:
+  Flutter-Engine:
+    name: 'Flutter Engine'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+      - name: 'Install depot tools'
+        run: |
+          git clone \
+            --depth 1 \
+            https://chromium.googlesource.com/chromium/tools/depot_tools.git \
+            ./depot_tools
+          rm -rf ./depot_tools/.git
+          echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
+      - name: 'Download Flutter Engine source'
+        run: |
+          mkdir -p engine
+          cp files/dot-gclient ./engine/.gclient
+          cd engine
+          gclient sync \
+            --revision src/flutter@3.24.3 \
+            --delete_unversioned_trees \
+            --reset \
+            --no-history \
+            --shallow
+      - name: 'Configure Flutter Engine'
+        working-directory: engine/src
+        run: |
+          ./flutter/tools/gn \
+            --unoptimized \
+            --no-enable-unittests \
+            --runtime-mode debug \
+            --target-os linux \
+            --linux-cpu arm64 \
+            --no-goma \
+            --embedder-for-target \
+            --lto \
+            --enable-vulkan \
+            --target-dir build \
+            --no-build-glfw-shell \
+            --no-build-embedder-examples \
+            --no-stripped
+      - name: 'Build Flutter Engine'
+        working-directory: engine/src/out/build
+        run: |
+          ninja \
+            libflutter_engine.so \
+            flutter_embedder.h \
+            icudtl.dat
+      - name: 'Package artifacts'
+        run: |
+          mkdir artifacts
+          cp engine/src/out/build/libflutter_engine.so ./artifacts
+          cp engine/src/out/build/icudtl.dat ./artifacts
+          cp engine/src/out/build/flutter_embedder.h ./artifacts
+          cd artifacts
+          tar cvJf ../flutter-engine-arm64.tar.xz ./*
+      - name: 'Upload artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-engine-arm64-3.24.3
+          path: flutter-engine-arm64.tar.xz
