@@ -6,6 +6,9 @@ jobs:
   Flutter-Engine:
     name: 'Flutter Engine'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runtime-mode: [debug-unoptimized, debug, profile, release]
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
@@ -39,9 +42,9 @@ jobs:
         working-directory: engine/src
         run: |
           ./flutter/tools/gn \
-            --unoptimized \
+            ${{ endsWith(matrix.runtime-mode, '-unoptimized') && '--unoptimized' || '' }} \
             --no-enable-unittests \
-            --runtime-mode debug \
+            --runtime-mode ${{ matrix.runtime-mode == 'debug-unoptimized' && 'debug' || matrix.runtime-mode }} \
             --target-os linux \
             --linux-cpu arm64 \
             --no-goma \
@@ -51,7 +54,7 @@ jobs:
             --target-dir build \
             --no-build-glfw-shell \
             --no-build-embedder-examples \
-            --no-stripped
+            ${{ startsWith(matrix.runtime-mode, 'debug-') && '--no-stripped' || '' }}
       - name: 'Build Flutter Engine'
         working-directory: engine/src/out/build
         run: |
@@ -68,11 +71,11 @@ jobs:
           cp engine/src/out/build/icudtl.dat ./artifacts
           cp engine/src/out/build/flutter_embedder.h ./artifacts
           cd artifacts
-          tar cvJf ../flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz ./*
+          tar cvJf ../flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
       - name: 'Upload artifacts'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz
-          path: flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz
+          name: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
+          path: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
