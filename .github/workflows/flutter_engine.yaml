@@ -17,13 +17,20 @@ jobs:
             ./depot_tools
           rm -rf ./depot_tools/.git
           echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
+      - name: 'Get Flutter version'
+        id: flutter-version
+        run: |
+          read -r FLUTTER_VERSION < version/flutter.version
+          echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
       - name: 'Download Flutter Engine source'
+        env:
+          FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
           mkdir -p engine
           cp files/dot-gclient ./engine/.gclient
           cd engine
           gclient sync \
-            --revision src/flutter@3.24.3 \
+            --revision src/flutter@${FLUTTER_VERSION} \
             --delete_unversioned_trees \
             --reset \
             --no-history \
@@ -53,15 +60,19 @@ jobs:
             flutter_embedder.h \
             icudtl.dat
       - name: 'Package artifacts'
+        env:
+          FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
           mkdir artifacts
           cp engine/src/out/build/libflutter_engine.so ./artifacts
           cp engine/src/out/build/icudtl.dat ./artifacts
           cp engine/src/out/build/flutter_embedder.h ./artifacts
           cd artifacts
-          tar cvJf ../flutter-engine-arm64.tar.xz ./*
+          tar cvJf ../flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz ./*
       - name: 'Upload artifacts'
+        env:
+          FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-engine-arm64-3.24.3
-          path: flutter-engine-arm64.tar.xz
+          name: flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz
+          path: flutter-engine-arm64-debug-unopt-${{ env.FLUTTER_VERSION }}.tar.xz
