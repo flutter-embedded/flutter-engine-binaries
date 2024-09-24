@@ -1,5 +1,8 @@
 name: Flutter Engine
-on: [push]
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
 env:
   TAR_OPTIONS: --no-same-owner
 jobs:
@@ -113,3 +116,39 @@ jobs:
         with:
           name: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
           path: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
+  Release:
+    name: 'Create GitHub Release'
+    needs: Build-Engine
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+      - name: 'Download build artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: 'Get Flutter version'
+        id: flutter-version
+        run: |
+          read -r FLUTTER_VERSION < version/flutter.version
+          echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
+          read -r ENGINE_HASH < version/engine.version
+          echo "ENGINE_HASH=${ENGINE_HASH}" >> $GITHUB_OUTPUT
+      - name: 'Format Release Notes Template'
+        env:
+          FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+          ENGINE_HASH: ${{ steps.flutter-version.outputs.ENGINE_HASH }}
+        run: |
+          sed -i "s/{{FLUTTER_VERSION}}/${{ env.FLUTTER_VERSION}}/g" files/release.md
+          sed -i "s/{{ENGINE_HASH}}/${{ env.ENGINE_HASH}}/g" files/release.md
+      - name: 'Create GitHub Release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "${tag}" \
+            --repo="${GITHUB_REPOSITORY}" \
+            --title="Flutter Engine ${tag}" \
+            --notes-file files/release.md \
+            --latest \
+            artifacts/*
