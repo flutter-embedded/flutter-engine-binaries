@@ -3,15 +3,17 @@ on: [push]
 env:
   TAR_OPTIONS: --no-same-owner
 jobs:
-  Flutter-Engine:
-    name: 'Flutter Engine'
+  Download-Source:
+    name: 'Download Engine Source'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        runtime-mode: [debug-unoptimized, debug, profile, release]
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
+      - name: 'Get Flutter version'
+        id: flutter-version
+        run: |
+          read -r FLUTTER_VERSION < version/flutter.version
+          echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
       - name: 'Install depot tools'
         run: |
           git clone \
@@ -20,11 +22,6 @@ jobs:
             ./depot_tools
           rm -rf ./depot_tools/.git
           echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
-      - name: 'Get Flutter version'
-        id: flutter-version
-        run: |
-          read -r FLUTTER_VERSION < version/flutter.version
-          echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
       - name: 'Download Flutter Engine source'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
@@ -38,6 +35,43 @@ jobs:
             --reset \
             --no-history \
             --shallow
+      - name: 'Cache Engine Source'
+        uses: actions/cache/save@v4
+        id: cache
+        with:
+          path: |
+            depot_tools
+            engine
+          key: engine-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+
+  Build-Engine:
+    name: 'Build Flutter Engine'
+    needs: Download-Source
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        runtime-mode: [debug-unoptimized, debug, profile, release]
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+      - name: 'Get Flutter version'
+        id: flutter-version
+        run: |
+          read -r FLUTTER_VERSION < version/flutter.version
+          echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
+      - name: 'Get depot_tools and engine source'
+        uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: |
+            depot_tools
+            engine
+          key: engine-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+          fail-on-cache-miss: true
+      - name: 'Install depot_tools in GITHUB_PATH'
+        run: |
+          echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
       - name: 'Configure Flutter Engine'
         working-directory: engine/src
         run: |
