@@ -55,8 +55,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        runtime-mode: [release]
-        #runtime-mode: [debug-unoptimized, debug, profile, release]
+        runtime-mode: [debug-unoptimized, debug, profile, release]
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
@@ -129,6 +128,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
       - name: 'Get Flutter version'
         id: flutter-version
         run: |
@@ -148,8 +148,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
-          ls -alh
-          ls -alh artifacts
           gh release create "${tag}" \
             --repo="${GITHUB_REPOSITORY}" \
             --title="Flutter Engine ${tag}" \
