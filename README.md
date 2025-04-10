@@ -18,8 +18,8 @@ A remote Docker build host can be used by setting the `DOCKER_HOST` environment 
 
 ```
 DOCKER_HOST="ssh://docker@docker.local" act \
-    --container-architecture linux/amd64
-    --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:runner-latest
+    --container-architecture linux/amd64 \
+    --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:runner-latest \
     --artifact-server-path ./tmp
 ```
 
