@@ -8,8 +8,9 @@ env:
   TAR_OPTIONS: --no-same-owner
 jobs:
   Download-Source:
+    # TODO: Check for existing cached source before attempting new download
     name: 'Download Engine Source'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
@@ -51,7 +52,7 @@ jobs:
   Build-Engine:
     name: 'Build Flutter Engine'
     needs: Download-Source
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     strategy:
       max-parallel: 1
       matrix:
@@ -120,7 +121,7 @@ jobs:
   Release:
     name: 'Create GitHub Release'
     needs: Build-Engine
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
