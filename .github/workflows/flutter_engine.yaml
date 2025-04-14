@@ -9,7 +9,7 @@ env:
 jobs:
   Download-Source:
     # TODO: Check for existing cached source before attempting new download
-    name: 'Download Engine Source'
+    name: 'Download Flutter Source'
     runs-on: [self-hosted, linux, x64]
     steps:
       - name: 'Checkout repository'
@@ -27,27 +27,27 @@ jobs:
             ./depot_tools
           rm -rf ./depot_tools/.git
           echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
-      - name: 'Download Flutter Engine source'
+      - name: 'Download Flutter source'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
-          mkdir -p engine
-          cp files/dot-gclient ./engine/.gclient
-          cd engine
+          mkdir -p flutter
+          cp files/dot-gclient ./flutter/.gclient
+          cd flutter
           gclient sync \
-            --revision src/flutter@${FLUTTER_VERSION} \
+            --revision ${FLUTTER_VERSION} \
             --delete_unversioned_trees \
             --reset \
             --no-history \
             --shallow
-      - name: 'Cache Engine Source'
+      - name: 'Cache Flutter Source'
         uses: actions/cache/save@v4
         id: cache
         with:
           path: |
             depot_tools
-            engine
-          key: engine-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+            flutter
+          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
 
   Build-Engine:
     name: 'Build Flutter Engine'
@@ -65,20 +65,20 @@ jobs:
         run: |
           read -r FLUTTER_VERSION < version/flutter.version
           echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
-      - name: 'Get depot_tools and engine source'
+      - name: 'Get depot_tools and flutter source from cache'
         uses: actions/cache/restore@v4
         id: cache
         with:
           path: |
             depot_tools
-            engine
-          key: engine-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+            flutter
+          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
           fail-on-cache-miss: true
       - name: 'Install depot_tools in GITHUB_PATH'
         run: |
           echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
       - name: 'Configure Flutter Engine'
-        working-directory: engine/src
+        working-directory: flutter/engine/src
         run: |
           ./flutter/tools/gn \
             ${{ endsWith(matrix.runtime-mode, '-unoptimized') && '--unoptimized' || '' }} \
@@ -95,7 +95,7 @@ jobs:
             --no-build-embedder-examples \
             ${{ startsWith(matrix.runtime-mode, 'debug-') && '--no-stripped' || '' }}
       - name: 'Build Flutter Engine'
-        working-directory: engine/src/out/build
+        working-directory: flutter/engine/src/out/build
         run: |
           ninja \
             libflutter_engine.so \
@@ -106,9 +106,9 @@ jobs:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
           mkdir artifacts
-          cp engine/src/out/build/libflutter_engine.so ./artifacts
-          cp engine/src/out/build/icudtl.dat ./artifacts
-          cp engine/src/out/build/flutter_embedder.h ./artifacts
+          cp flutter/engine/src/out/build/libflutter_engine.so ./artifacts
+          cp flutter/engine/src/out/build/icudtl.dat ./artifacts
+          cp flutter/engine/src/out/build/flutter_embedder.h ./artifacts
           cd artifacts
           tar cvJf ../flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
       - name: 'Upload artifacts'
@@ -135,15 +135,11 @@ jobs:
         run: |
           read -r FLUTTER_VERSION < version/flutter.version
           echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
-          read -r ENGINE_HASH < version/engine.version
-          echo "ENGINE_HASH=${ENGINE_HASH}" >> $GITHUB_OUTPUT
       - name: 'Format Release Notes Template'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
-          ENGINE_HASH: ${{ steps.flutter-version.outputs.ENGINE_HASH }}
         run: |
           sed -i "s/{{FLUTTER_VERSION}}/${{ env.FLUTTER_VERSION}}/g" files/release.md
-          sed -i "s/{{ENGINE_HASH}}/${{ env.ENGINE_HASH}}/g" files/release.md
       - name: 'Create GitHub Release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
