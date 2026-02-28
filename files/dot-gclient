@@ -10,23 +10,3 @@ solutions = [{
     "download_linux_deps": True,
   }
 }]
-
-# Workaround to allow depot_tools to find the ninja binary
-# Can be removed after https://github.com/flutter/flutter/pull/164240 lands
-hooks = [
-  {
-    "name": "create buildtools directory",
-    "pattern": ".",
-    "action": ["mkdir", "-p", "buildtools"],
-  },
-  {
-    "name": "create third_party directory",
-    "pattern": ".",
-    "action": ["mkdir", "-p", "third_party"],
-  },
-  {
-    "name": "copy ninja into third_party",
-    "pattern": ".",
-    "action": ["cp", "-r", "engine/src/flutter/third_party/ninja", "third_party/"],
-  }
-]
