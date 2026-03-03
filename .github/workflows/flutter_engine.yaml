@@ -8,7 +8,6 @@ env:
   TAR_OPTIONS: --no-same-owner
 jobs:
   Download-Source:
-    # TODO: Check for existing cached source before attempting new download
     name: 'Download Flutter Source'
     runs-on: [self-hosted, linux, x64]
     steps:
@@ -18,8 +17,19 @@ jobs:
         id: flutter-version
         run: |
           read -r FLUTTER_VERSION < version/flutter.version
+          FLUTTER_HASH=$(git ls-remote https://github.com/flutter/flutter.git "refs/tags/${FLUTTER_VERSION}" | cut -f1)
           echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
+          echo "FLUTTER_HASH=${FLUTTER_HASH}" >> $GITHUB_OUTPUT
+      - name: 'Check for cached Flutter source'
+        uses: actions/cache/restore@v5
+        id: cache
+        with:
+          path: |
+            depot_tools
+            flutter
+          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}-${{ steps.flutter-version.outputs.FLUTTER_HASH }}
       - name: 'Install depot tools'
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           git clone \
             --depth 1 \
@@ -28,6 +38,7 @@ jobs:
           rm -rf ./depot_tools/.git
           echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
       - name: 'Download Flutter source'
+        if: steps.cache.outputs.cache-hit != 'true'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
@@ -41,13 +52,13 @@ jobs:
             --no-history \
             --shallow
       - name: 'Cache Flutter Source'
-        uses: actions/cache/save@v4
-        id: cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
         with:
           path: |
             depot_tools
             flutter
-          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}-${{ steps.flutter-version.outputs.FLUTTER_HASH }}
 
   Build-Engine:
     name: 'Build Flutter Engine'
@@ -64,15 +75,17 @@ jobs:
         id: flutter-version
         run: |
           read -r FLUTTER_VERSION < version/flutter.version
+          FLUTTER_HASH=$(git ls-remote https://github.com/flutter/flutter.git "refs/tags/${FLUTTER_VERSION}" | cut -f1)
           echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
+          echo "FLUTTER_HASH=${FLUTTER_HASH}" >> $GITHUB_OUTPUT
       - name: 'Get depot_tools and flutter source from cache'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: cache
         with:
           path: |
             depot_tools
             flutter
-          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+          key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}-${{ steps.flutter-version.outputs.FLUTTER_HASH }}
           fail-on-cache-miss: true
       - name: 'Install depot_tools in GITHUB_PATH'
         run: |
