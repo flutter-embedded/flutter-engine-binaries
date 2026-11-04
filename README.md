@@ -6,11 +6,11 @@ This is a work in progress open source translation of some internal tooling. At 
 
 ## Running GitHub Workflows Locally
 
-The GitHub workflows can be run locally with [act](https://github.com/nektos/act). An `--artifact-server-path` must be provided to collect the build output. The `--platform` argument overrides the default `ubuntu-latest` runner with a non-root runner. If the platform override is omitted the build will work but tools will complain about running as root.
+The GitHub workflows can be run locally with [act](https://github.com/nektos/act). An `--artifact-server-path` must be provided to collect the build output. The `--platform` argument overrides the default `ubuntu-24.04` runner with a non-root runner. If the platform override is omitted the build will work but tools will complain about running as root.
 
 ```
 act \
-    --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:runner-latest
+    --platform ubuntu-24.04=ghcr.io/catthehacker/ubuntu:runner-24.04
     --artifact-server-path ./artifacts
 ```
 
@@ -19,7 +19,7 @@ A remote Docker build host can be used by setting the `DOCKER_HOST` environment 
 ```
 DOCKER_HOST="ssh://docker@docker.local" act \
     --container-architecture linux/amd64 \
-    --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:runner-latest \
+    --platform ubuntu-24.04=ghcr.io/catthehacker/ubuntu:runner-24.04 \
     --artifact-server-path ./tmp
 ```
 
