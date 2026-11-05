@@ -10,7 +10,7 @@ The GitHub workflows can be run locally with [act](https://github.com/nektos/act
 
 ```
 act \
-    --platform ubuntu-24.04=ghcr.io/catthehacker/ubuntu:runner-24.04
+    --platform ubuntu-24.04=ghcr.io/catthehacker/ubuntu:runner-24.04 \
     --artifact-server-path ./artifacts
 ```
 
@@ -25,6 +25,5 @@ DOCKER_HOST="ssh://docker@docker.local" act \
 
 ## TODO
 
-- Upload artifacts as GitHub releases
 - Build for multiple architectures
 - Automated checks for new Flutter releases
