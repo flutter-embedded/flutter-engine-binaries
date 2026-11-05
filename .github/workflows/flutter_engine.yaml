@@ -28,6 +28,7 @@ jobs:
             depot_tools
             flutter
           key: flutter-source-${{ steps.flutter-version.outputs.FLUTTER_VERSION }}-${{ steps.flutter-version.outputs.FLUTTER_HASH }}
+          lookup-only: true
       - name: 'Install depot tools'
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
