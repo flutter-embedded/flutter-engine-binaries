@@ -65,7 +65,7 @@ jobs:
     needs: Download-Source
     runs-on: ubuntu-24.04
     strategy:
-      max-parallel: 1
+      max-parallel: 4
       matrix:
         runtime-mode: [debug-unoptimized, debug, profile, release]
     steps:
