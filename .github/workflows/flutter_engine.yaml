@@ -129,10 +129,14 @@ jobs:
           cp flutter/engine/src/out/build/libflutter_engine.so ./artifacts
           cp flutter/engine/src/out/build/icudtl.dat ./artifacts
           cp flutter/engine/src/out/build/flutter_embedder.h ./artifacts
+          file artifacts/libflutter_engine.so | grep 'shared object, ARM aarch64'
           if [ "${{ matrix.gen-snapshot }}" = "true" ]; then
             mkdir -p ./artifacts/gen_snapshot/linux-x64 ./artifacts/gen_snapshot/linux-arm64
             cp flutter/engine/src/out/build/clang_x64/gen_snapshot ./artifacts/gen_snapshot/linux-x64/
             cp flutter/engine/src/out/build/gen_snapshot ./artifacts/gen_snapshot/linux-arm64/
+            file artifacts/gen_snapshot/linux-x64/gen_snapshot | grep 'executable, x86-64'
+            file artifacts/gen_snapshot/linux-arm64/gen_snapshot | grep 'executable, ARM aarch64'
+            artifacts/gen_snapshot/linux-x64/gen_snapshot --version 2>&1 | grep linux_simarm64
           fi
           cd artifacts
           tar cvJf ../flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
