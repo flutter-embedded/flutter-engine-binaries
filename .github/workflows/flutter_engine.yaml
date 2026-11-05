@@ -69,6 +69,11 @@ jobs:
       max-parallel: 4
       matrix:
         runtime-mode: [debug-unoptimized, debug, profile, release]
+        include:
+          - runtime-mode: profile
+            gen-snapshot: true
+          - runtime-mode: release
+            gen-snapshot: true
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v7
@@ -114,7 +119,8 @@ jobs:
           ninja \
             libflutter_engine.so \
             flutter_embedder.h \
-            icudtl.dat
+            icudtl.dat \
+            ${{ matrix.gen-snapshot && 'clang_x64/gen_snapshot gen_snapshot' || '' }}
       - name: 'Package artifacts'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
@@ -123,6 +129,11 @@ jobs:
           cp flutter/engine/src/out/build/libflutter_engine.so ./artifacts
           cp flutter/engine/src/out/build/icudtl.dat ./artifacts
           cp flutter/engine/src/out/build/flutter_embedder.h ./artifacts
+          if [ "${{ matrix.gen-snapshot }}" = "true" ]; then
+            mkdir -p ./artifacts/gen_snapshot/linux-x64 ./artifacts/gen_snapshot/linux-arm64
+            cp flutter/engine/src/out/build/clang_x64/gen_snapshot ./artifacts/gen_snapshot/linux-x64/
+            cp flutter/engine/src/out/build/gen_snapshot ./artifacts/gen_snapshot/linux-arm64/
+          fi
           cd artifacts
           tar cvJf ../flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
       - name: 'Upload artifacts'
