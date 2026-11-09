@@ -139,14 +139,14 @@ jobs:
             artifacts/gen_snapshot/linux-x64/gen_snapshot --version 2>&1 | grep linux_simarm64
           fi
           cd artifacts
-          tar cvJf ../flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
+          tar cvJf ../flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
       - name: 'Upload artifacts'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
-          path: flutter-engine-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
+          name: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
+          path: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
   Release:
     name: 'Create GitHub Release'
     needs: Build-Engine
