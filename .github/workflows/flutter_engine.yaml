@@ -71,9 +71,9 @@ jobs:
         runtime-mode: [debug-unoptimized, debug, profile, release]
         include:
           - runtime-mode: profile
-            gen-snapshot: true
+            aot: true
           - runtime-mode: release
-            gen-snapshot: true
+            aot: true
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v7
@@ -112,7 +112,7 @@ jobs:
             --target-dir build \
             --no-build-glfw-shell \
             --no-build-embedder-examples \
-            ${{ startsWith(matrix.runtime-mode, 'debug-') && '--no-stripped' || '' }}
+            ${{ matrix.aot && '--stripped' || '--no-stripped' }}
       - name: 'Build Flutter Engine'
         working-directory: flutter/engine/src/out/build
         run: |
@@ -120,7 +120,7 @@ jobs:
             libflutter_engine.so \
             flutter_embedder.h \
             icudtl.dat \
-            ${{ matrix.gen-snapshot && 'clang_x64/gen_snapshot gen_snapshot' || '' }}
+            ${{ matrix.aot && 'clang_x64/gen_snapshot gen_snapshot' || '' }}
       - name: 'Package artifacts'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
@@ -129,14 +129,16 @@ jobs:
           cp flutter/engine/src/out/build/libflutter_engine.so ./artifacts
           cp flutter/engine/src/out/build/icudtl.dat ./artifacts
           cp flutter/engine/src/out/build/flutter_embedder.h ./artifacts
-          file artifacts/libflutter_engine.so | grep 'shared object, ARM aarch64'
-          if [ "${{ matrix.gen-snapshot }}" = "true" ]; then
+          file artifacts/libflutter_engine.so | grep 'shared object, ARM aarch64.*${{ matrix.aot && ', stripped' || ', not stripped' }}'
+          if [ "${{ matrix.aot }}" = "true" ]; then
             mkdir -p ./artifacts/gen_snapshot/linux-x64 ./artifacts/gen_snapshot/linux-arm64
             cp flutter/engine/src/out/build/clang_x64/gen_snapshot ./artifacts/gen_snapshot/linux-x64/
             cp flutter/engine/src/out/build/gen_snapshot ./artifacts/gen_snapshot/linux-arm64/
             file artifacts/gen_snapshot/linux-x64/gen_snapshot | grep 'executable, x86-64'
             file artifacts/gen_snapshot/linux-arm64/gen_snapshot | grep 'executable, ARM aarch64'
             artifacts/gen_snapshot/linux-x64/gen_snapshot --version 2>&1 | grep linux_simarm64
+            file flutter/engine/src/out/build/lib.unstripped/libflutter_engine.so | grep 'shared object, ARM aarch64.*with debug_info, not stripped'
+            tar cvJf flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-symbols-${{ env.FLUTTER_VERSION }}.tar.xz -C flutter/engine/src/out/build/lib.unstripped ./libflutter_engine.so
           fi
           cd artifacts
           tar cvJf ../flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
@@ -147,6 +149,14 @@ jobs:
         with:
           name: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
           path: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz
+      - name: 'Upload debug symbols'
+        if: matrix.aot
+        env:
+          FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-symbols-${{ env.FLUTTER_VERSION }}.tar.xz
+          path: flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-symbols-${{ env.FLUTTER_VERSION }}.tar.xz
   Release:
     name: 'Create GitHub Release'
     needs: Build-Engine
