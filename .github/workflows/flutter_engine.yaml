@@ -81,6 +81,7 @@ jobs:
         id: flutter-version
         run: |
           read -r FLUTTER_VERSION < version/flutter.version
+          # This ls-remote trick will need to be tweaked if the Flutter repo ever uses annotated tags
           FLUTTER_HASH=$(git ls-remote https://github.com/flutter/flutter.git "refs/tags/${FLUTTER_VERSION}" | cut -f1)
           echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
           echo "FLUTTER_HASH=${FLUTTER_HASH}" >> $GITHUB_OUTPUT
@@ -124,11 +125,20 @@ jobs:
       - name: 'Package artifacts'
         env:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
+          FLUTTER_HASH: ${{ steps.flutter-version.outputs.FLUTTER_HASH }}
         run: |
           mkdir artifacts
           cp flutter/engine/src/out/build/libflutter_engine.so ./artifacts
           cp flutter/engine/src/out/build/icudtl.dat ./artifacts
           cp flutter/engine/src/out/build/flutter_embedder.h ./artifacts
+          cp flutter/engine/src/flutter/sky/packages/sky_engine/LICENSE ./artifacts
+          sed \
+            -e "s|{{REPOSITORY_URL}}|${{ github.server_url }}/${{ github.repository }}|g" \
+            -e "s|{{REPOSITORY_HASH}}|${{ github.sha }}|g" \
+            -e "s|{{FLUTTER_VERSION}}|${{ env.FLUTTER_VERSION }}|g" \
+            -e "s|{{FLUTTER_HASH}}|${{ env.FLUTTER_HASH }}|g" \
+            -e "s|{{RUNTIME_MODE}}|${{ matrix.runtime-mode }}|g" \
+            files/readme.md > artifacts/README.md
           file artifacts/libflutter_engine.so | grep 'shared object, ARM aarch64.*${{ matrix.aot && ', stripped' || ', not stripped' }}'
           if [ "${{ matrix.aot }}" = "true" ]; then
             mkdir -p ./artifacts/gen_snapshot/linux-x64 ./artifacts/gen_snapshot/linux-arm64
@@ -138,7 +148,9 @@ jobs:
             file artifacts/gen_snapshot/linux-arm64/gen_snapshot | grep 'executable, ARM aarch64'
             artifacts/gen_snapshot/linux-x64/gen_snapshot --version 2>&1 | grep linux_simarm64
             file flutter/engine/src/out/build/lib.unstripped/libflutter_engine.so | grep 'shared object, ARM aarch64.*with debug_info, not stripped'
-            tar cvJf flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-symbols-${{ env.FLUTTER_VERSION }}.tar.xz -C flutter/engine/src/out/build/lib.unstripped ./libflutter_engine.so
+            mkdir symbols
+            cp flutter/engine/src/out/build/lib.unstripped/libflutter_engine.so artifacts/LICENSE artifacts/README.md ./symbols
+            tar cvJf flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-symbols-${{ env.FLUTTER_VERSION }}.tar.xz -C symbols .
           fi
           cd artifacts
           tar cvJf ../flutter-engine-linux-arm64-${{ matrix.runtime-mode }}-${{ env.FLUTTER_VERSION }}.tar.xz ./*
