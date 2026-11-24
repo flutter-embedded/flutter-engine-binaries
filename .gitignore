@@ -1,2 +1,6 @@
 # Suggested output directory when running workflows locally with act
 artifacts/
+
+# Local directory for secrets, ephemeral logs, temporary files, scratchpad work, etc.
+/.local/
+

@@ -20,7 +20,7 @@ A remote Docker build host can be used by setting the `DOCKER_HOST` environment 
 DOCKER_HOST="ssh://docker@docker.local" act \
     --container-architecture linux/amd64 \
     --platform ubuntu-24.04=ghcr.io/catthehacker/ubuntu:runner-24.04 \
-    --artifact-server-path ./tmp
+    --artifact-server-path ./artifacts
 ```
 
 ## TODO
