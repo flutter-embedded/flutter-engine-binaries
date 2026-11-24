@@ -185,6 +185,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v7.0.1
@@ -205,6 +207,10 @@ jobs:
           FLUTTER_VERSION: ${{ steps.flutter-version.outputs.FLUTTER_VERSION }}
         run: |
           sed -i "s/{{FLUTTER_VERSION}}/${{ env.FLUTTER_VERSION}}/g" files/release.md
+      - name: 'Attest build provenance'
+        uses: actions/attest@v4.2.2
+        with:
+          subject-path: 'artifacts/*.tar.xz'
       - name: 'Create GitHub Release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
